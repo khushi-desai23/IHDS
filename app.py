@@ -13,7 +13,7 @@ def load_model(model_path):
         model.load_state_dict(torch.load(model_path, map_location=device))
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        return None
+        return None  # Return None if model fails to load
     
     model.to(device)
     model.eval()
@@ -31,7 +31,7 @@ def preprocess_image(image):
 # Predict the class
 def predict(model, image_tensor):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    image_tensor = image_tensor.to(device)
+    image_tensor = image_tensor.to(device)  # Ensure tensor is on the same device as the model
     
     with torch.no_grad():
         outputs = model(image_tensor)
@@ -51,7 +51,7 @@ if uploaded_image:
         st.image(image, caption="Uploaded Image", use_column_width=True)
     except Exception as e:
         st.error(f"Error loading image: {e}")
-        return  # Exit if image cannot be loaded
+        st.stop()  # Stop execution if image loading fails
 
     st.write("Processing the image...")
 
@@ -63,7 +63,7 @@ if uploaded_image:
     model = load_model(model_path)
     
     if model is None:
-        return  # Exit if model fails to load
+        st.stop()  # Stop execution if model loading fails
     
     # Predict
     class_index = predict(model, image_tensor)
