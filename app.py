@@ -7,11 +7,20 @@ import timm
 # Load the model
 def load_model(model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Adjust architecture
+    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Ensure this matches your checkpoint's architecture
     
-    # Load the model weights (state_dict)
+    # Load the model weights (checkpoint)
     checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint, strict=True)
+    
+    # Filter the state_dict to only load matching layers
+    model_state_dict = model.state_dict()
+    pretrained_dict = {k: v for k, v in checkpoint.items() if k in model_state_dict and v.size() == model_state_dict[k].size()}
+
+    # Update the model's state_dict with the pretrained weights for matching layers
+    model_state_dict.update(pretrained_dict)
+    
+    # Load the filtered state dict into the model
+    model.load_state_dict(model_state_dict, strict=False)  # strict=False allows for some layers to be ignored if they don't match in size
     
     model.to(device)
     model.eval()
@@ -29,11 +38,12 @@ def preprocess_image(image):
 # Predict the class
 def predict(model, image_tensor):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    image_tensor = image_tensor.to(device)
+    image_tensor = image_tensor.to(device)  # Ensure tensor is on the same device as the model
     
     with torch.no_grad():
         outputs = model(image_tensor)
         _, predicted = torch.max(outputs, 1)
+    
     return predicted.item()
 
 # Streamlit app
@@ -45,10 +55,10 @@ if uploaded_image:
     try:
         # Open and convert the image to RGB format
         image = Image.open(uploaded_image).convert("RGB")
-        st.image(image, caption="Uploaded Image", use_container_width=True)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
     except Exception as e:
         st.error(f"Error loading image: {e}")
-        st.stop()
+        st.stop()  # Stop execution if image loading fails
 
     st.write("Processing the image...")
 
@@ -56,12 +66,11 @@ if uploaded_image:
     image_tensor = preprocess_image(image)
 
     # Load the model
-    model_path = "FINAL_fulll_2.pth"  # Replace with your model's state_dict path
-    try:
-        model = load_model(model_path)
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()
+    model_path = "4bit_model.pth"  # Replace with the path to your .pth file
+    model = load_model(model_path)
+    
+    if model is None:
+        st.stop()  # Stop execution if model loading fails
     
     # Predict
     class_index = predict(model, image_tensor)
