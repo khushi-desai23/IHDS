@@ -7,21 +7,31 @@ import timm
 # Load the model
 def load_model(model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Ensure this matches your checkpoint's architecture
     
+    try:
+        # Initialize model with correct architecture
+        model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)
+    except Exception as e:
+        raise RuntimeError(f"Error creating model: {e}")
+
     # Load the model weights (checkpoint)
-    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
-    
+    try:
+        checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+    except Exception as e:
+        raise RuntimeError(f"Error loading model checkpoint: {e}")
+
     # Filter the state_dict to only load matching layers
     model_state_dict = model.state_dict()
     pretrained_dict = {k: v for k, v in checkpoint.items() if k in model_state_dict and v.size() == model_state_dict[k].size()}
 
-    # Update the model's state_dict with the pretrained weights for matching layers
+    # Update the model's state_dict
     model_state_dict.update(pretrained_dict)
-    
-    # Load the filtered state dict into the model
-    model.load_state_dict(model_state_dict, strict=False)  # strict=False allows for some layers to be ignored if they don't match in size
-    
+
+    try:
+        model.load_state_dict(model_state_dict, strict=False)
+    except Exception as e:
+        raise RuntimeError(f"Error loading state dict: {e}")
+
     model.to(device)
     model.eval()
     return model
@@ -66,10 +76,11 @@ if uploaded_image:
     image_tensor = preprocess_image(image)
 
     # Load the model
-    model_path = "4bit_model.pth"  # Replace with the path to your .pth file
-    model = load_model(model_path)
-    
-    if model is None:
+    model_path = "today_final.pth"  # Replace with the path to your .pth file
+    try:
+        model = load_model(model_path)
+    except RuntimeError as e:
+        st.error(str(e))
         st.stop()  # Stop execution if model loading fails
     
     # Predict
