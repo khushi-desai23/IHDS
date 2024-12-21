@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
 import torch
-from torchvision import transforms
+from torchvision import transforms, models
 
 # Streamlit app title
 st.title("Heritage Site Classifier and Image Resizer")
@@ -10,8 +10,15 @@ st.title("Heritage Site Classifier and Image Resizer")
 st.write("Upload or take a picture, and it will classify the heritage site and resize the image to 224x224 pixels.")
 
 # Load the PyTorch model
-def load_model(model_path):
-    model = torch.load(model_path, map_location=torch.device('cpu'))
+def load_model(model_path, num_classes):
+    # Initialize the model architecture (replace with your specific model if needed)
+    model = models.resnet18(pretrained=False)  # Example using ResNet18
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)  # Adjust for your dataset
+
+    # Load the state dictionary
+    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    model.load_state_dict(state_dict)
+
     model.eval()
     return model
 
@@ -29,12 +36,15 @@ def load_class_labels(label_path):
     return class_labels
 
 # Paths to model and class labels
-MODEL_PATH = "today_final.pth"  # Replace with your .pth file path
-LABELS_PATH = "labels.txt"  # Replace with your label file path
+MODEL_PATH = "model.pth"  # Replace with your .pth file path
+LABELS_PATH = "class_labels.txt"  # Replace with your label file path
 
-# Load the model and class labels
-model = load_model(MODEL_PATH)
+# Load the class labels
 class_labels = load_class_labels(LABELS_PATH)
+num_classes = len(class_labels)
+
+# Load the model
+model = load_model(MODEL_PATH, num_classes)
 
 # Image upload
 uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
