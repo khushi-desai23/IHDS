@@ -56,7 +56,7 @@ if uploaded_image:
     image_tensor = preprocess_image(image)
 
     # Load the model
-    model_path = "model_weights.pth"  # Replace with your model's state_dict path
+    model_path = "FINAL_fulll_2.pth"  # Replace with your model's state_dict path
     try:
         model = load_model(model_path)
     except Exception as e:
