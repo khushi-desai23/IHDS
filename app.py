@@ -8,7 +8,13 @@ import timm
 def load_model(model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Adjust num_classes as needed
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
+    
     model.to(device)
     model.eval()
     return model
@@ -26,9 +32,11 @@ def preprocess_image(image):
 def predict(model, image_tensor):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     image_tensor = image_tensor.to(device)
+    
     with torch.no_grad():
         outputs = model(image_tensor)
         _, predicted = torch.max(outputs, 1)
+    
     return predicted.item()
 
 # Streamlit app
@@ -37,8 +45,13 @@ st.title("Heritage Site Classifier")
 uploaded_image = st.file_uploader("Upload an image of a heritage site", type=["jpg", "jpeg", "png"])
 
 if uploaded_image:
-    image = Image.open(uploaded_image).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    try:
+        # Open and convert the image to RGB format
+        image = Image.open(uploaded_image).convert("RGB")
+        st.image(image, caption="Uploaded Image", use_column_width=True)
+    except Exception as e:
+        st.error(f"Error loading image: {e}")
+        return  # Exit if image cannot be loaded
 
     st.write("Processing the image...")
 
@@ -48,61 +61,31 @@ if uploaded_image:
     # Load the model
     model_path = "FINAL.pth"  # Replace with the path to your .pth file
     model = load_model(model_path)
-
+    
+    if model is None:
+        return  # Exit if model fails to load
+    
     # Predict
     class_index = predict(model, image_tensor)
 
     # Map class index to class name
     class_names = [
-        "Agra Fort",
-        "Alhole",
-        "Ambigera Gudi Complex, Alhole",
-        "Amruteshwara Temple, Annigeri",
-        "Billeshwar Temple Hanagal",
-        "Brahmeshwar Temple, Kikkeri",
-        "Channakeshwa Temple, Aralguppe",
-        "Chennakeshwara Temple, Belur",
-        "Digambar Basti, Belgum",
-        "Doddabasappa Temple, Gadag",
-        "Galaganath Temple, Haveri",
-        "Goudaragudi Temple, Aihole",
-        "Hampi Monolithic Bull",
-        "Hampi Chariot",
-        "Hazara Rama Temple, Hampi",
-        "Hoysaleshwar Temple, Halebeedu",
-        "Ibrahim Roza",
-        "Jain Basadi, Bilagi",
-        "Kaadasidheshwar Temple, Pattadakal",
-        "Kadambeshwara Temple, Rattihalli, Haveri",
-        "Kamal Basti, Belagavi",
-        "Kappechenikeshwara Temple, Hassan",
-        "Kedadeshwara Temple, Hassan",
-        "Keshava Temple, Somanathapur, Mysore",
-        "Kiatabeshwar Temple, Kubatur",
-        "Koravangala Temple, Hassan",
-        "Kotilingeshwara, Kotipur, Hanagal",
-        "Kumaraswamy Temple, Sandur, Hospet",
-        "Kunti Temple Complex, Aihole",
-        "Lady of Mount, Goa",
-        "Lakshmikant Temple, Nanjangudu, Mysore",
-        "Lotus Mahai, Hampi",
-        "Madhukeshwara Temple, Banavasi",
-        "Mahabodhi Temple",
-        "Mahadev Temple, Tambdisurla, Goa",
-        "Mahadeva Temple, Ittagi",
-        "Mallikarjuna Temple, Mandya",
-        "Moole Shankareswara Temple, Turuvekere",
-        "Nagreshwara Temple, Bankapur",
-        "Papanath Temple, Pattadakal",
-        "Rameshwar Temple",
-        "Safa Masjid, Belgaum",
-        "Sangameshwar Pattadakal",
-        "Shiva Basadi, Shravanbelagola",
-        "Someshwar Temple, Kaginele",
-        "Someshwara Temple, Lakshmeshwara",
-        "Tarakeshwara Temple, Hangal",
-        "Trikuteshwara Temple, Gadag",
-        "Twin Tower Temple, Sudi",
-        "Veerabhadreshwara Temple, Hangal"
+        "Agra Fort", "Alhole", "Ambigera Gudi Complex, Alhole", "Amruteshwara Temple, Annigeri",
+        "Billeshwar Temple Hanagal", "Brahmeshwar Temple, Kikkeri", "Channakeshwa Temple, Aralguppe",
+        "Chennakeshwara Temple, Belur", "Digambar Basti, Belgum", "Doddabasappa Temple, Gadag", 
+        "Galaganath Temple, Haveri", "Goudaragudi Temple, Aihole", "Hampi Monolithic Bull", 
+        "Hampi Chariot", "Hazara Rama Temple, Hampi", "Hoysaleshwar Temple, Halebeedu", "Ibrahim Roza",
+        "Jain Basadi, Bilagi", "Kaadasidheshwar Temple, Pattadakal", "Kadambeshwara Temple, Rattihalli, Haveri",
+        "Kamal Basti, Belagavi", "Kappechenikeshwara Temple, Hassan", "Kedadeshwara Temple, Hassan",
+        "Keshava Temple, Somanathapur, Mysore", "Kiatabeshwar Temple, Kubatur", "Koravangala Temple, Hassan",
+        "Kotilingeshwara, Kotipur, Hanagal", "Kumaraswamy Temple, Sandur, Hospet", "Kunti Temple Complex, Aihole",
+        "Lady of Mount, Goa", "Lakshmikant Temple, Nanjangudu, Mysore", "Lotus Mahai, Hampi", 
+        "Madhukeshwara Temple, Banavasi", "Mahabodhi Temple", "Mahadev Temple, Tambdisurla, Goa",
+        "Mahadeva Temple, Ittagi", "Mallikarjuna Temple, Mandya", "Moole Shankareswara Temple, Turuvekere",
+        "Nagreshwara Temple, Bankapur", "Papanath Temple, Pattadakal", "Rameshwar Temple", 
+        "Safa Masjid, Belgaum", "Sangameshwar Pattadakal", "Shiva Basadi, Shravanbelagola",
+        "Someshwar Temple, Kaginele", "Someshwara Temple, Lakshmeshwara", "Tarakeshwara Temple, Hangal",
+        "Trikuteshwara Temple, Gadag", "Twin Tower Temple, Sudi", "Veerabhadreshwara Temple, Hangal"
     ]
+    
     st.write(f"Predicted Heritage Site: {class_names[class_index]}")
