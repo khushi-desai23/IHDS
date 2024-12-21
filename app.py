@@ -94,7 +94,7 @@ if uploaded_image:
     image_tensor = preprocess_image(image)
 
     # Load the model
-    model_path = "FINAL_full_2.pth"  # Replace with the path to your .pth file
+    model_path = "FINAL_fulll_2.pth"  # Replace with the path to your .pth file
     try:
         model = load_model(model_path)
     except RuntimeError as e:
