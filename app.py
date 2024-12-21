@@ -1,57 +1,108 @@
-from flask import Flask, request, render_template
+import streamlit as st
 import torch
-from torchvision import transforms
+import torchvision.transforms as transforms
 from PIL import Image
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Subset
-from torchvision import datasets, transforms
-import numpy as np
 import timm
-from sklearn.model_selection import StratifiedShuffleSplit
-import matplotlib.pyplot as plt
-import torch.nn.functional as F
-from PIL import Image
 
-# Initialize Flask app
-app = Flask(__name__)
+# Load the model
+def load_model(model_path):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Adjust num_classes as needed
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.to(device)
+    model.eval()
+    return model
 
-# Load your model
-model = torch.jit.load("C:\\Users\\Dell\\Desktop\\ML_CP\\mobilenetv4_scripted.pt")
-model.eval()
+# Preprocess the image
+def preprocess_image(image):
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    return transform(image).unsqueeze(0)  # Add batch dimension
 
-# Define image preprocessing
-preprocess = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-])
+# Predict the class
+def predict(model, image_tensor):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    image_tensor = image_tensor.to(device)
+    with torch.no_grad():
+        outputs = model(image_tensor)
+        _, predicted = torch.max(outputs, 1)
+    return predicted.item()
 
-# If you need to get class labels, load the ImageFolder dataset
-data_dir = "C:/Users/Dell/Desktop/ML_CP/DATASET/IHDS_dataset"
-train_dataset = datasets.ImageFolder(root=f"{data_dir}/train", transform=preprocess)
-class_labels = train_dataset.classes  # Extract class labels from the dataset
+# Streamlit app
+st.title("Heritage Site Classifier")
 
-@app.route('/')
-def home():
-    return render_template("index.html")  # Make sure index.html is inside templates folder
+uploaded_image = st.file_uploader("Upload an image of a heritage site", type=["jpg", "jpeg", "png"])
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    if 'file' not in request.files:
-        return "No file uploaded", 400
-    file = request.files['file']
+if uploaded_image:
+    image = Image.open(uploaded_image).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Open and preprocess the image
-    image = Image.open(file.stream).convert('RGB')
-    image = preprocess(image).unsqueeze(0)  # Apply preprocessing and add batch dimension
+    st.write("Processing the image...")
+
+    # Preprocess the image
+    image_tensor = preprocess_image(image)
+
+    # Load the model
+    model_path = "FINAL.pth"  # Replace with the path to your .pth file
+    model = load_model(model_path)
 
     # Predict
-    with torch.no_grad():
-        output = model(image)
-        _, predicted = torch.max(output, 1)
-        predicted_class = class_labels[predicted.item()]
+    class_index = predict(model, image_tensor)
 
-    return f"Predicted Class: {predicted_class}"
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    # Map class index to class name
+    class_names = [
+        "Agra Fort",
+        "Alhole",
+        "Ambigera Gudi Complex, Alhole",
+        "Amruteshwara Temple, Annigeri",
+        "Billeshwar Temple Hanagal",
+        "Brahmeshwar Temple, Kikkeri",
+        "Channakeshwa Temple, Aralguppe",
+        "Chennakeshwara Temple, Belur",
+        "Digambar Basti, Belgum",
+        "Doddabasappa Temple, Gadag",
+        "Galaganath Temple, Haveri",
+        "Goudaragudi Temple, Aihole",
+        "Hampi Monolithic Bull",
+        "Hampi Chariot",
+        "Hazara Rama Temple, Hampi",
+        "Hoysaleshwar Temple, Halebeedu",
+        "Ibrahim Roza",
+        "Jain Basadi, Bilagi",
+        "Kaadasidheshwar Temple, Pattadakal",
+        "Kadambeshwara Temple, Rattihalli, Haveri",
+        "Kamal Basti, Belagavi",
+        "Kappechenikeshwara Temple, Hassan",
+        "Kedadeshwara Temple, Hassan",
+        "Keshava Temple, Somanathapur, Mysore",
+        "Kiatabeshwar Temple, Kubatur",
+        "Koravangala Temple, Hassan",
+        "Kotilingeshwara, Kotipur, Hanagal",
+        "Kumaraswamy Temple, Sandur, Hospet",
+        "Kunti Temple Complex, Aihole",
+        "Lady of Mount, Goa",
+        "Lakshmikant Temple, Nanjangudu, Mysore",
+        "Lotus Mahai, Hampi",
+        "Madhukeshwara Temple, Banavasi",
+        "Mahabodhi Temple",
+        "Mahadev Temple, Tambdisurla, Goa",
+        "Mahadeva Temple, Ittagi",
+        "Mallikarjuna Temple, Mandya",
+        "Moole Shankareswara Temple, Turuvekere",
+        "Nagreshwara Temple, Bankapur",
+        "Papanath Temple, Pattadakal",
+        "Rameshwar Temple",
+        "Safa Masjid, Belgaum",
+        "Sangameshwar Pattadakal",
+        "Shiva Basadi, Shravanbelagola",
+        "Someshwar Temple, Kaginele",
+        "Someshwara Temple, Lakshmeshwara",
+        "Tarakeshwara Temple, Hangal",
+        "Trikuteshwara Temple, Gadag",
+        "Twin Tower Temple, Sudi",
+        "Veerabhadreshwara Temple, Hangal"
+    ]
+    st.write(f"Predicted Heritage Site: {class_names[class_index]}")
