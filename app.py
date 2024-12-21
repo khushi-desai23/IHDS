@@ -16,7 +16,7 @@ def load_model(model_path):
 
     # Load the model weights (checkpoint)
     try:
-        checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+        checkpoint = torch.load(model_path, map_location=device)
     except Exception as e:
         raise RuntimeError(f"Error loading model checkpoint: {e}")
 
@@ -41,6 +41,7 @@ def preprocess_image(image):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
+        # Ensure you're using the correct normalization values
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     return transform(image).unsqueeze(0)  # Add batch dimension
@@ -54,7 +55,7 @@ def predict(model, image_tensor):
         outputs = model(image_tensor)
         _, predicted = torch.max(outputs, 1)
     
-    return predicted.item()
+    return predicted.item(), outputs
 
 # Streamlit app
 st.title("Heritage Site Classifier")
@@ -84,7 +85,7 @@ if uploaded_image:
         st.stop()  # Stop execution if model loading fails
     
     # Predict
-    class_index = predict(model, image_tensor)
+    class_index, outputs = predict(model, image_tensor)
 
     # Map class index to class name
     class_names = [
@@ -106,4 +107,7 @@ if uploaded_image:
         "Trikuteshwara Temple, Gadag", "Twin Tower Temple, Sudi", "Veerabhadreshwara Temple, Hangal"
     ]
     
+    # Debugging: Print the raw model output for insights
+    st.write("Raw model outputs:", outputs)
+
     st.write(f"Predicted Heritage Site: {class_names[class_index]}")
