@@ -36,8 +36,8 @@ def load_class_labels(label_path):
     return class_labels
 
 # Paths to model and class labels
-MODEL_PATH = "model.pth"  # Replace with your .pth file path
-LABELS_PATH = "class_labels.txt"  # Replace with your label file path
+MODEL_PATH = "today_final.pth"  # Replace with your .pth file path
+LABELS_PATH = "labels.txt"  # Replace with your label file path
 
 # Load the class labels
 class_labels = load_class_labels(LABELS_PATH)
