@@ -7,13 +7,20 @@ import timm
 # Load the model
 def load_model(model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Adjust num_classes as needed
+    model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Ensure this matches your checkpoint's architecture
     
-    try:
-        model.load_state_dict(torch.load(model_path, map_location=device))
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        return None  # Return None if model fails to load
+    # Load the model weights (checkpoint)
+    checkpoint = torch.load(model_path, map_location=device)
+    
+    # Filter the state_dict to only load matching layers
+    model_state_dict = model.state_dict()
+    pretrained_dict = {k: v for k, v in checkpoint.items() if k in model_state_dict and v.size() == model_state_dict[k].size()}
+
+    # Update the model's state_dict with the pretrained weights for matching layers
+    model_state_dict.update(pretrained_dict)
+    
+    # Load the filtered state dict into the model
+    model.load_state_dict(model_state_dict, strict=False)  # strict=False allows for some layers to be ignored if they don't match in size
     
     model.to(device)
     model.eval()
