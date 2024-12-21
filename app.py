@@ -10,7 +10,7 @@ def load_model(model_path):
     model = timm.create_model('mobilenetv3_large_100', pretrained=False, num_classes=50)  # Ensure this matches your checkpoint's architecture
     
     # Load the model weights (checkpoint)
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
     
     # Filter the state_dict to only load matching layers
     model_state_dict = model.state_dict()
@@ -55,7 +55,7 @@ if uploaded_image:
     try:
         # Open and convert the image to RGB format
         image = Image.open(uploaded_image).convert("RGB")
-        st.image(image, caption="Uploaded Image", use_column_width=True)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
     except Exception as e:
         st.error(f"Error loading image: {e}")
         st.stop()  # Stop execution if image loading fails
@@ -66,7 +66,7 @@ if uploaded_image:
     image_tensor = preprocess_image(image)
 
     # Load the model
-    model_path = "today_final.pth"  # Replace with the path to your .pth file
+    model_path = "4bit_model.pth"  # Replace with the path to your .pth file
     model = load_model(model_path)
     
     if model is None:
