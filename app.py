@@ -3,6 +3,7 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import timm
+import torch.nn.functional as F
 
 # Load the model
 def load_model(model_path):
@@ -16,7 +17,7 @@ def load_model(model_path):
 
     # Load the model weights (checkpoint)
     try:
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=True)
     except Exception as e:
         raise RuntimeError(f"Error loading model checkpoint: {e}")
 
@@ -41,12 +42,11 @@ def preprocess_image(image):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        # Ensure you're using the correct normalization values
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     return transform(image).unsqueeze(0)  # Add batch dimension
 
-# Predict the class
+# Predict the class and return logits
 def predict(model, image_tensor):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     image_tensor = image_tensor.to(device)  # Ensure tensor is on the same device as the model
@@ -55,7 +55,7 @@ def predict(model, image_tensor):
         outputs = model(image_tensor)
         _, predicted = torch.max(outputs, 1)
     
-    return predicted.item(), outputs
+    return predicted.item(), outputs  # Return both predicted class index and raw logits
 
 # Streamlit app
 st.title("Heritage Site Classifier")
@@ -87,6 +87,9 @@ if uploaded_image:
     # Predict
     class_index, outputs = predict(model, image_tensor)
 
+    # Apply softmax to logits to get probabilities
+    probabilities = F.softmax(outputs, dim=1)
+
     # Map class index to class name
     class_names = [
         "Agra Fort", "Alhole", "Ambigera Gudi Complex, Alhole", "Amruteshwara Temple, Annigeri",
@@ -107,7 +110,8 @@ if uploaded_image:
         "Trikuteshwara Temple, Gadag", "Twin Tower Temple, Sudi", "Veerabhadreshwara Temple, Hangal"
     ]
     
-    # Debugging: Print the raw model output for insights
-    st.write("Raw model outputs:", outputs)
-
+    # Show the class name with highest probability
     st.write(f"Predicted Heritage Site: {class_names[class_index]}")
+
+    # Display class probabilities
+    st.write(f"Class probabilities: {probabilities}")
