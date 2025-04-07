@@ -1,3 +1,6 @@
+import streamlit as st
+from PIL import Image
+
 # Streamlit app
 st.title("Heritage Site Classifier")
 
@@ -13,6 +16,5 @@ if uploaded_image:
 
     st.write("Processing the image...")
 
-    # You can skip model loading, preprocessing and prediction
-    # Just hardcode the result
+    # Always return "Hampi Chariot"
     st.success("Predicted Heritage Site: Hampi Chariot")
